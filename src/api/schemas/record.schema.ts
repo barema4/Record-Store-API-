@@ -30,6 +30,20 @@ export class Record extends Document {
 
   @Prop({ required: false })
   mbid?: string;
+
+  @Prop({ type: [String], default: [] })
+  tracklist: string[];
 }
 
 export const RecordSchema = SchemaFactory.createForClass(Record);
+
+// Create compound index for unique record identification
+RecordSchema.index({ artist: 1, album: 1, format: 1 }, { unique: true });
+
+// Create individual indexes for commonly searched fields
+RecordSchema.index({ artist: 1 });
+RecordSchema.index({ album: 1 });
+RecordSchema.index({ category: 1 });
+RecordSchema.index({ format: 1 });
+RecordSchema.index({ mbid: 1 });
+
