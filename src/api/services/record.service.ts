@@ -89,6 +89,27 @@ export class RecordService {
       throw new NotFoundException('Record not found');
     }
 
+     // If artist, album, or format is being updated, check for duplicates
+     if (updateRecordDto.artist || updateRecordDto.album || updateRecordDto.format) {
+      const artist = updateRecordDto.artist || record.artist;
+      const album = updateRecordDto.album || record.album;
+      const format = updateRecordDto.format || record.format;
+
+      // Check if a record with these values already exists (excluding the current record)
+      const existingRecord = await this.recordModel.findOne({
+        _id: { $ne: id },
+        artist,
+        album,
+        format
+      });
+
+      if (existingRecord) {
+        throw new BadRequestException(
+          `A record with artist ${artist}, album ${album}, and format ${format} already exists`
+        );
+      }
+    }
+
     // If MBID is updated, fetch new tracklist
     let tracklist = record.tracklist;
     if (updateRecordDto.mbid && updateRecordDto.mbid !== record.mbid) {
