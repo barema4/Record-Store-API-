@@ -1,3 +1,4 @@
+
 import {
   Controller,
   Get,
@@ -6,140 +7,128 @@ import {
   Param,
   Query,
   Put,
-  InternalServerErrorException,
+  Delete,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Record } from '../schemas/record.schema';
-import { Model } from 'mongoose';
-import { ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
-import { CreateRecordRequestDTO } from '../dtos/create-record.request.dto';
-import { RecordCategory, RecordFormat } from '../schemas/record.enum';
-import { UpdateRecordRequestDTO } from '../dtos/update-record.request.dto';
+import { RecordService } from '../services/record.service';
+import { CreateRecordDto, UpdateRecordDto } from '../dtos/record.dto';
+import { RecordResponseDto, PaginatedRecordResponseDto } from '../dtos/record.response.dto';
+import { 
+  ApiTags, 
+  ApiOperation, 
+  ApiResponse, 
+  ApiQuery,
+  ApiParam,
+  ApiBody
+} from '@nestjs/swagger';
+import { RecordFormat, RecordCategory } from '../schemas/record.enum';
 
+@ApiTags('records')
 @Controller('records')
 export class RecordController {
-  constructor(
-    @InjectModel('Record') private readonly recordModel: Model<Record>,
-  ) {}
+  constructor(private readonly recordService: RecordService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new record' })
-  @ApiResponse({ status: 201, description: 'Record successfully created' })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
-  async create(@Body() request: CreateRecordRequestDTO): Promise<Record> {
-    return await this.recordModel.create({
-      artist: request.artist,
-      album: request.album,
-      price: request.price,
-      qty: request.qty,
-      format: request.format,
-      category: request.category,
-      mbid: request.mbid,
-    });
-  }
-
-  @Put(':id')
-  @ApiOperation({ summary: 'Update an existing record' })
-  @ApiResponse({ status: 200, description: 'Record updated successfully' })
-  @ApiResponse({ status: 500, description: 'Cannot find record to update' })
-  async update(
-    @Param('id') id: string,
-    @Body() updateRecordDto: UpdateRecordRequestDTO,
-  ): Promise<Record> {
-    const record = await this.recordModel.findById(id);
-    if (!record) {
-      throw new InternalServerErrorException('Record not found');
-    }
-
-    Object.assign(record, updateRecordDto);
-
-    const updated = await this.recordModel.updateOne(record);
-    if (!updated) {
-      throw new InternalServerErrorException('Failed to update record');
-    }
-
-    return record;
+  @ApiOperation({ 
+    summary: 'Create a new record',
+    description: 'Creates a new record in the store. If an MBID is provided, it will fetch the track listing from MusicBrainz.'
+  })
+  @ApiBody({ type: CreateRecordDto })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Record successfully created.',
+    type: RecordResponseDto
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Bad request - Invalid data or record already exists.'
+  })
+  async create(@Body() createRecordDto: CreateRecordDto): Promise<RecordResponseDto> {
+    return this.recordService.create(createRecordDto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all records with optional filters' })
-  @ApiResponse({
-    status: 200,
-    description: 'List of records',
-    type: [Record],
+  @ApiOperation({ 
+    summary: 'Get all records with filters',
+    description: 'Retrieves records with optional filtering, pagination, and sorting.'
   })
-  @ApiQuery({
-    name: 'q',
-    required: false,
-    description:
-      'Search query (search across multiple fields like artist, album, category, etc.)',
-    type: String,
+  @ApiQuery({ name: 'artist', required: false, description: 'Filter by artist name (case-insensitive)' })
+  @ApiQuery({ name: 'album', required: false, description: 'Filter by album name (case-insensitive)' })
+  @ApiQuery({ name: 'format', required: false, enum: RecordFormat, description: 'Filter by record format' })
+  @ApiQuery({ name: 'category', required: false, enum: RecordCategory, description: 'Filter by record category' })
+  @ApiQuery({ name: 'minPrice', required: false, type: Number, description: 'Minimum price filter' })
+  @ApiQuery({ name: 'maxPrice', required: false, type: Number, description: 'Maximum price filter' })
+  @ApiQuery({ name: 'inStock', required: false, type: Boolean, description: 'Filter for records in stock' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Records per page (default: 10)' })
+  @ApiQuery({ name: 'sortBy', required: false, description: 'Field to sort by (default: lastModified)' })
+  @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'], description: 'Sort order (default: desc)' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Returns paginated records matching the criteria.',
+    type: PaginatedRecordResponseDto
   })
-  @ApiQuery({
-    name: 'artist',
-    required: false,
-    description: 'Filter by artist name',
-    type: String,
+  async findAll(@Query() query: any): Promise<PaginatedRecordResponseDto> {
+    return this.recordService.findAll(query);
+  }
+
+  @Get(':id')
+  @ApiOperation({ 
+    summary: 'Get a record by ID',
+    description: 'Retrieves detailed information about a specific record.'
   })
-  @ApiQuery({
-    name: 'album',
-    required: false,
-    description: 'Filter by album name',
-    type: String,
+  @ApiParam({ name: 'id', description: 'Record ID' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Returns the record.',
+    type: RecordResponseDto
   })
-  @ApiQuery({
-    name: 'format',
-    required: false,
-    description: 'Filter by record format (Vinyl, CD, etc.)',
-    enum: RecordFormat,
-    type: String,
+  @ApiResponse({ 
+    status: 404, 
+    description: 'Record not found.'
   })
-  @ApiQuery({
-    name: 'category',
-    required: false,
-    description: 'Filter by record category (e.g., Rock, Jazz)',
-    enum: RecordCategory,
-    type: String,
+  async findOne(@Param('id') id: string): Promise<RecordResponseDto> {
+    return this.recordService.findById(id);
+  }
+
+  @Put(':id')
+  @ApiOperation({ 
+    summary: 'Update a record',
+    description: 'Updates a record. If MBID is changed, it will fetch new track listing from MusicBrainz.'
   })
-  async findAll(
-    @Query('q') q?: string,
-    @Query('artist') artist?: string,
-    @Query('album') album?: string,
-    @Query('format') format?: RecordFormat,
-    @Query('category') category?: RecordCategory,
-  ): Promise<Record[]> {
-    const allRecords = await this.recordModel.find().exec();
+  @ApiParam({ name: 'id', description: 'Record ID' })
+  @ApiBody({ type: UpdateRecordDto })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Record successfully updated.',
+    type: RecordResponseDto
+  })
+  @ApiResponse({ 
+    status: 404, 
+    description: 'Record not found.'
+  })
+  async update(
+    @Param('id') id: string, 
+    @Body() updateRecordDto: UpdateRecordDto
+  ): Promise<RecordResponseDto> {
+    return this.recordService.update(id, updateRecordDto);
+  }
 
-    const filteredRecords = allRecords.filter((record) => {
-      let match = true;
-
-      if (q) {
-        match =
-          match &&
-          (record.artist.includes(q) ||
-            record.album.includes(q) ||
-            record.category.includes(q));
-      }
-
-      if (artist) {
-        match = match && record.artist.includes(artist);
-      }
-
-      if (album) {
-        match = match && record.album.includes(album);
-      }
-
-      if (format) {
-        match = match && record.format === format;
-      }
-
-      if (category) {
-        match = match && record.category === category;
-      }
-
-      return match;
-    });
-
-    return filteredRecords;
+  @Delete(':id')
+  @ApiOperation({ 
+    summary: 'Delete a record',
+    description: 'Removes a record from the store.'
+  })
+  @ApiParam({ name: 'id', description: 'Record ID' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Record successfully deleted.'
+  })
+  @ApiResponse({ 
+    status: 404, 
+    description: 'Record not found.'
+  })
+  async remove(@Param('id') id: string): Promise<void> {
+    return this.recordService.delete(id);
   }
 }
+
