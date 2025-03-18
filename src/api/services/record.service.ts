@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, SortOrder } from 'mongoose';
 import { Record } from '../schemas/record.schema';
@@ -7,8 +7,26 @@ import { RecordResponseDto, PaginatedRecordResponseDto } from '../dtos/record.re
 import axios from 'axios';
 import { parseStringPromise } from 'xml2js';
 
+interface MusicBrainzData {
+  tracklist: string[];
+  artist?: string;
+  album?: string;
+  releaseDate?: string;
+}
+
+// Extended types to include tracklist
+interface EnhancedCreateRecordDto extends CreateRecordDto {
+  tracklist?: string[];
+}
+
+interface EnhancedUpdateRecordDto extends UpdateRecordDto {
+  tracklist?: string[];
+}
+
 @Injectable()
 export class RecordService {
+  private readonly logger = new Logger(RecordService.name);
+
   constructor(
     @InjectModel(Record.name) private recordModel: Model<Record>,
   ) {}
@@ -29,28 +47,140 @@ export class RecordService {
     };
   }
 
-  private async fetchMusicBrainzData(mbid: string): Promise<string[]> {
+  private async fetchMusicBrainzData(mbid: string): Promise<MusicBrainzData> {
+    this.logger.log(`Fetching MusicBrainz data for MBID: ${mbid}`);
+    
     try {
       // Add delay to respect MusicBrainz rate limiting (1 request per second)
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      const url = `http://musicbrainz.org/ws/2/release/${mbid}?inc=recordings+artists+release-groups`;
+      this.logger.log(`Making request to: ${url}`);
+      
       const response = await axios.get(
-        `http://musicbrainz.org/ws/2/release/${mbid}?inc=recordings`,
+        url,
         {
           headers: {
             'User-Agent': 'BrokenRecordStore/1.0.0 (contact@brokenrecordstore.com)',
             'Accept': 'application/xml'
-          }
+          },
+          timeout: 10000 // 10 second timeout
         }
       );
 
-      const result = await parseStringPromise(response.data);
-      const tracks = result.metadata?.release?.[0]?.['medium-list']?.[0]?.medium?.[0]?.['track-list']?.[0]?.track || [];
+      if (!response.data) {
+        this.logger.error('Empty response from MusicBrainz API');
+        return { tracklist: [] };
+      }
       
-      return tracks.map(track => track.recording[0].title[0]);
+      this.logger.log('Successfully received response from MusicBrainz');
+      
+      const result = await parseStringPromise(response.data);
+      if (!result || !result.metadata) {
+        this.logger.error('Failed to parse MusicBrainz XML or missing metadata', { result });
+        return { tracklist: [] };
+      }
+      
+      this.logger.debug('Parsed XML structure', { 
+        hasRelease: !!result.metadata.release,
+        releaseLength: result.metadata.release?.length
+      });
+      
+      const data: MusicBrainzData = { tracklist: [] };
+      
+      try {
+        const release = result.metadata?.release?.[0];
+        if (!release) {
+          this.logger.warn('No release found in response');
+          return { tracklist: [] };
+        }
+        
+        // Extract album title
+        if (release.title && release.title[0]) {
+          data.album = release.title[0];
+          this.logger.log(`Found album title: ${data.album}`);
+        }
+        
+        // Extract artist name
+        if (release['artist-credit'] && release['artist-credit'][0] && 
+            release['artist-credit'][0].name && release['artist-credit'][0].name[0]) {
+          data.artist = release['artist-credit'][0].name[0];
+          this.logger.log(`Found artist: ${data.artist}`);
+        } else if (release['artist-credit'] && release['artist-credit'][0] && 
+                  release['artist-credit'][0].artist && release['artist-credit'][0].artist[0] &&
+                  release['artist-credit'][0].artist[0].name && release['artist-credit'][0].artist[0].name[0]) {
+          data.artist = release['artist-credit'][0].artist[0].name[0];
+          this.logger.log(`Found artist (alternative path): ${data.artist}`);
+        }
+        
+        // Extract release date
+        if (release.date && release.date[0]) {
+          data.releaseDate = release.date[0];
+          this.logger.log(`Found release date: ${data.releaseDate}`);
+        }
+        
+        // Extract track listing
+        const mediumList = release['medium-list']?.[0];
+        if (!mediumList) {
+          this.logger.warn('No medium-list found in release');
+          return data;
+        }
+        
+        const medium = mediumList.medium?.[0];
+        if (!medium) {
+          this.logger.warn('No medium found in medium-list');
+          return data;
+        }
+        
+        const trackList = medium['track-list']?.[0];
+        if (!trackList) {
+          this.logger.warn('No track-list found in medium');
+          return data;
+        }
+        
+        const tracks = trackList.track || [];
+        this.logger.log(`Found ${tracks.length} tracks`);
+        
+        data.tracklist = tracks.map(track => {
+          try {
+            return track.recording[0].title[0];
+          } catch (e) {
+            this.logger.warn(`Could not extract title for track`, { track });
+            return 'Unknown Track';
+          }
+        });
+        
+        this.logger.log(`Successfully extracted ${data.tracklist.length} track titles`);
+      } catch (parseError) {
+        this.logger.error('Error parsing data from response', parseError);
+      }
+      
+      return data;
     } catch (error) {
-      console.error('Error fetching MusicBrainz data:', error.message);
-      return [];
+      this.logger.error('Error fetching MusicBrainz data', { 
+        mbid, 
+        error: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        this.logger.error('API Error Response', { 
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+      } else if (error.request) {
+        // The request was made but no response was received
+        this.logger.error('No response received', { request: error.request });
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        this.logger.error('Request setup error', { message: error.message });
+      }
+      
+      return { tracklist: [] };
     }
   }
 
@@ -66,15 +196,35 @@ export class RecordService {
       throw new BadRequestException('Record already exists');
     }
 
-    // If MBID is provided, fetch tracklist from MusicBrainz
-    let tracklist: string[] = [];
+    // If MBID is provided, fetch record data from MusicBrainz
+    const recordData: EnhancedCreateRecordDto = { 
+      ...createRecordDto,
+      tracklist: [] // Always initialize with empty array
+    };
+    
     if (createRecordDto.mbid) {
-      tracklist = await this.fetchMusicBrainzData(createRecordDto.mbid);
+      this.logger.log(`Fetching record data for new record with MBID: ${createRecordDto.mbid}`);
+      
+      const mbData = await this.fetchMusicBrainzData(createRecordDto.mbid);
+      this.logger.log(`Fetched ${mbData.tracklist.length} tracks`);
+      
+      // Use tracklist from MusicBrainz
+      recordData.tracklist = mbData.tracklist;
+      
+      // If artist or album is not provided in DTO, use data from MusicBrainz
+      if (!createRecordDto.artist && mbData.artist) {
+        this.logger.log(`Using artist from MusicBrainz: ${mbData.artist}`);
+        recordData.artist = mbData.artist;
+      }
+      
+      if (!createRecordDto.album && mbData.album) {
+        this.logger.log(`Using album from MusicBrainz: ${mbData.album}`);
+        recordData.album = mbData.album;
+      }
     }
 
     const record = new this.recordModel({
-      ...createRecordDto,
-      tracklist,
+      ...recordData,
       created: new Date(),
       lastModified: new Date()
     });
@@ -89,8 +239,8 @@ export class RecordService {
       throw new NotFoundException('Record not found');
     }
 
-     // If artist, album, or format is being updated, check for duplicates
-     if (updateRecordDto.artist || updateRecordDto.album || updateRecordDto.format) {
+    // If artist, album, or format is being updated, check for duplicates
+    if (updateRecordDto.artist || updateRecordDto.album || updateRecordDto.format) {
       const artist = updateRecordDto.artist || record.artist;
       const album = updateRecordDto.album || record.album;
       const format = updateRecordDto.format || record.format;
@@ -105,22 +255,42 @@ export class RecordService {
 
       if (existingRecord) {
         throw new BadRequestException(
-          `A record with artist ${artist}, album ${album}, and format ${format} already exists`
+          `A record with artist "${artist}", album "${album}", and format "${format}" already exists`
         );
       }
     }
 
-    // If MBID is updated, fetch new tracklist
-    let tracklist = record.tracklist;
+    // If MBID is updated, fetch new record data
+    const recordUpdates: EnhancedUpdateRecordDto = { 
+      ...updateRecordDto,
+      tracklist: record.tracklist || [] // Maintain the existing tracklist
+    };
+    
     if (updateRecordDto.mbid && updateRecordDto.mbid !== record.mbid) {
-      tracklist = await this.fetchMusicBrainzData(updateRecordDto.mbid);
+      this.logger.log(`MBID changed from ${record.mbid} to ${updateRecordDto.mbid}. Fetching new record data.`);
+      
+      const mbData = await this.fetchMusicBrainzData(updateRecordDto.mbid);
+      this.logger.log(`Fetched ${mbData.tracklist.length} tracks for updated MBID`);
+      
+      // Always update tracklist when MBID changes
+      recordUpdates.tracklist = mbData.tracklist;
+      
+      // Only update artist and album if they weren't explicitly provided in the update DTO
+      if (!updateRecordDto.artist && mbData.artist) {
+        this.logger.log(`Using artist from MusicBrainz for update: ${mbData.artist}`);
+        recordUpdates.artist = mbData.artist;
+      }
+      
+      if (!updateRecordDto.album && mbData.album) {
+        this.logger.log(`Using album from MusicBrainz for update: ${mbData.album}`);
+        recordUpdates.album = mbData.album;
+      }
     }
 
     const updatedRecord = await this.recordModel.findByIdAndUpdate(
       id,
       {
-        ...updateRecordDto,
-        tracklist,
+        ...recordUpdates,
         lastModified: new Date()
       },
       { new: true }
@@ -191,6 +361,41 @@ export class RecordService {
     const result = await this.recordModel.deleteOne({ _id: id });
     if (result.deletedCount === 0) {
       throw new NotFoundException('Record not found');
+    }
+  }
+
+  /**
+   * Public method to test MusicBrainz integration
+   * @param mbid MusicBrainz ID to test
+   * @returns Track listings and status information
+   */
+  async testMusicBrainzIntegration(mbid: string) {
+    this.logger.log(`Running MusicBrainz integration test for MBID: ${mbid}`);
+    
+    try {
+      const start = Date.now();
+      const data = await this.fetchMusicBrainzData(mbid);
+      const duration = Date.now() - start;
+      
+      return {
+        success: true,
+        mbid,
+        artist: data.artist,
+        album: data.album,
+        releaseDate: data.releaseDate,
+        tracks: data.tracklist,
+        count: data.tracklist.length,
+        durationMs: duration,
+      };
+    } catch (error) {
+      this.logger.error('Error in MusicBrainz test', { error });
+      return {
+        success: false,
+        mbid,
+        error: error.message,
+        tracks: [],
+        count: 0
+      };
     }
   }
 }

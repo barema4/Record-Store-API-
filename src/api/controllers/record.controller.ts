@@ -1,4 +1,3 @@
-
 import {
   Controller,
   Get,
@@ -8,6 +7,8 @@ import {
   Query,
   Put,
   Delete,
+  HttpCode,
+  HttpStatus
 } from '@nestjs/common';
 import { RecordService } from '../services/record.service';
 import { CreateRecordDto, UpdateRecordDto } from '../dtos/record.dto';
@@ -129,6 +130,69 @@ export class RecordController {
   })
   async remove(@Param('id') id: string): Promise<void> {
     return this.recordService.delete(id);
+  }
+
+  @Get('test-musicbrainz/:mbid')
+  @ApiOperation({ 
+    summary: 'Test MusicBrainz Integration',
+    description: 'Tests the MusicBrainz API integration by fetching detailed information for a given MBID'
+  })
+  @ApiParam({ name: 'mbid', description: 'MusicBrainz ID to test' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Successfully fetched record information',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        mbid: { type: 'string' },
+        artist: { 
+          type: 'string',
+          description: 'Artist name retrieved from MusicBrainz',
+          nullable: true
+        },
+        album: { 
+          type: 'string', 
+          description: 'Album title retrieved from MusicBrainz',
+          nullable: true
+        },
+        releaseDate: { 
+          type: 'string', 
+          description: 'Release date retrieved from MusicBrainz',
+          nullable: true
+        },
+        tracks: { 
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Track listing retrieved from MusicBrainz'
+        },
+        count: { 
+          type: 'number',
+          description: 'Number of tracks found'
+        },
+        durationMs: { 
+          type: 'number',
+          description: 'Time taken to fetch the data in milliseconds'
+        }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Failed to fetch record information',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: false },
+        mbid: { type: 'string' },
+        error: { type: 'string', description: 'Error message' },
+        tracks: { type: 'array', items: { type: 'string' }, description: 'Empty array' },
+        count: { type: 'number', example: 0 }
+      }
+    }
+  })
+  async testMusicBrainz(@Param('mbid') mbid: string) {
+    return this.recordService.testMusicBrainzIntegration(mbid);
   }
 }
 
