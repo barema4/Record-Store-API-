@@ -74,6 +74,11 @@ To build and run the app in production mode:
 npm run start:prod
 ```
 
+```
+http://localhost:3000/swagger#/
+```
+To test the Api, follow the swagger documentation above for the endpoints
+
 ### Tests
 #### Run Unit Tests
 To run unit tests:
@@ -102,4 +107,6 @@ To check if your code passes ESLint checks:
 npm run lint
 ```
 This command will show you any linting issues with your code.
+
+
 
