@@ -64,7 +64,7 @@ export class RecordService {
             'User-Agent': 'BrokenRecordStore/1.0.0 (contact@brokenrecordstore.com)',
             'Accept': 'application/xml'
           },
-          timeout: 10000 // 10 second timeout
+          timeout: 10000 
         }
       );
 
@@ -173,7 +173,6 @@ export class RecordService {
           headers: error.response.headers
         });
       } else if (error.request) {
-        // The request was made but no response was received
         this.logger.error('No response received', { request: error.request });
       } else {
         // Something happened in setting up the request that triggered an Error
@@ -199,7 +198,7 @@ export class RecordService {
     // If MBID is provided, fetch record data from MusicBrainz
     const recordData: EnhancedCreateRecordDto = { 
       ...createRecordDto,
-      tracklist: [] // Always initialize with empty array
+      tracklist: []
     };
     
     if (createRecordDto.mbid) {
@@ -208,7 +207,6 @@ export class RecordService {
       const mbData = await this.fetchMusicBrainzData(createRecordDto.mbid);
       this.logger.log(`Fetched ${mbData.tracklist.length} tracks`);
       
-      // Use tracklist from MusicBrainz
       recordData.tracklist = mbData.tracklist;
       
       // If artist or album is not provided in DTO, use data from MusicBrainz
@@ -255,7 +253,7 @@ export class RecordService {
 
       if (existingRecord) {
         throw new BadRequestException(
-          `A record with artist "${artist}", album "${album}", and format "${format}" already exists`
+          `A record with artist ${artist}, album ${album}, and format ${format} already exists`
         );
       }
     }
@@ -263,7 +261,7 @@ export class RecordService {
     // If MBID is updated, fetch new record data
     const recordUpdates: EnhancedUpdateRecordDto = { 
       ...updateRecordDto,
-      tracklist: record.tracklist || [] // Maintain the existing tracklist
+      tracklist: record.tracklist || []
     };
     
     if (updateRecordDto.mbid && updateRecordDto.mbid !== record.mbid) {
@@ -272,7 +270,6 @@ export class RecordService {
       const mbData = await this.fetchMusicBrainzData(updateRecordDto.mbid);
       this.logger.log(`Fetched ${mbData.tracklist.length} tracks for updated MBID`);
       
-      // Always update tracklist when MBID changes
       recordUpdates.tracklist = mbData.tracklist;
       
       // Only update artist and album if they weren't explicitly provided in the update DTO
@@ -364,11 +361,6 @@ export class RecordService {
     }
   }
 
-  /**
-   * Public method to test MusicBrainz integration
-   * @param mbid MusicBrainz ID to test
-   * @returns Track listings and status information
-   */
   async testMusicBrainzIntegration(mbid: string) {
     this.logger.log(`Running MusicBrainz integration test for MBID: ${mbid}`);
     
