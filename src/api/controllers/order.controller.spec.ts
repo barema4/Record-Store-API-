@@ -15,7 +15,7 @@ describe('OrderController', () => {
     totalPrice: 10,
     orderDate: new Date(),
     customerName: 'Sam Ru',
-    customerEmail: 'john@example.com',
+    customerEmail: 'samru@gmail.com',
     shippingAddress: '123 Main St'
   };
 
@@ -31,7 +31,7 @@ describe('OrderController', () => {
     recordId: '1',
     quantity: 1,
     customerName: 'Sam Ru',
-    customerEmail: 'john@example.com',
+    customerEmail: 'samru@gmail.com',
     shippingAddress: '123 Main St'
   };
 

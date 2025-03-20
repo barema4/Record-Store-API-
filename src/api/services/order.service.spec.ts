@@ -20,7 +20,7 @@ describe('OrderService', () => {
     totalPrice: 59.98,
     orderDate: new Date('2023-09-14T10:00:00.000Z'),
     customerName: 'Sam Ru',
-    customerEmail: 'john@example.com',
+    customerEmail: 'samru@gmail.com',
     shippingAddress: '123 Main St'
   };
 
@@ -44,7 +44,7 @@ describe('OrderService', () => {
     totalPrice: 59.98,
     orderDate: new Date('2023-09-14T10:00:00.000Z'),
     customerName: 'Sam Ru',
-    customerEmail: 'john@example.com',
+    customerEmail: 'samru@gmail.com',
     shippingAddress: '123 Main St'
   };
 
@@ -92,7 +92,7 @@ describe('OrderService', () => {
         recordId: '6502a59a5d6d1234567890aa',
         quantity: 2,
         customerName: 'Sam Ru',
-        customerEmail: 'john@example.com',
+        customerEmail: 'samru@gmail.com',
         shippingAddress: '123 Main St'
       };
       const mockRecord = { _id: '6502a59a5d6d1234567890aa', price: 29.99, qty: 5 };
@@ -109,7 +109,7 @@ describe('OrderService', () => {
         totalPrice: 59.98,
         orderDate: expect.any(Date),
         customerName: 'Sam Ru',
-        customerEmail: 'john@example.com',
+        customerEmail: 'samru@gmail.com',
         shippingAddress: '123 Main St'
       });
       expect(recordModel.findById).toHaveBeenCalledWith('6502a59a5d6d1234567890aa');
@@ -119,7 +119,7 @@ describe('OrderService', () => {
         totalPrice: 59.98,
         orderDate: expect.any(Date),
         customerName: 'Sam Ru',
-        customerEmail: 'john@example.com',
+        customerEmail: 'samru@gmail.com',
         shippingAddress: '123 Main St'
       });
       expect(recordModel.findByIdAndUpdate).toHaveBeenCalledWith('6502a59a5d6d1234567890aa', {
@@ -132,7 +132,7 @@ describe('OrderService', () => {
         recordId: '1',
         quantity: 1,
         customerName: 'Sam Ru',
-        customerEmail: 'john@example.com',
+        customerEmail: 'samru@gmail.com',
         shippingAddress: '123 Main St'
       };
       mockRecordModel.findById.mockResolvedValue(null);
@@ -147,7 +147,7 @@ describe('OrderService', () => {
         recordId: '1',
         quantity: 5,
         customerName: 'Sam Ru',
-        customerEmail: 'john@example.com',
+        customerEmail: 'samru@gmail.com',
         shippingAddress: '123 Main St'
       };
       const mockRecord = { _id: '1', price: 10, qty: 3 };
@@ -169,7 +169,7 @@ describe('OrderService', () => {
           totalPrice: 10,
           orderDate: new Date(),
           customerName: 'Sam Ru',
-          customerEmail: 'john@example.com',
+          customerEmail: 'samru@gmail.com',
           shippingAddress: '123 Main St'
         },
       ];
@@ -195,7 +195,7 @@ describe('OrderService', () => {
             totalPrice: 10,
             orderDate: expect.any(Date),
             customerName: 'Sam Ru',
-            customerEmail: 'john@example.com',
+            customerEmail: 'samru@gmail.com',
             shippingAddress: '123 Main St'
           },
         ],
@@ -216,7 +216,7 @@ describe('OrderService', () => {
         totalPrice: 10,
         orderDate: new Date(),
         customerName: 'Sam Ru',
-        customerEmail: 'john@example.com',
+        customerEmail: 'samru@gmail.com',
         shippingAddress: '123 Main St'
       };
       mockOrderModel.findById.mockResolvedValue(mockOrder);
@@ -230,7 +230,7 @@ describe('OrderService', () => {
         totalPrice: 10,
         orderDate: expect.any(Date),
         customerName: 'Sam Ru',
-        customerEmail: 'john@example.com',
+        customerEmail: 'samru@gmail.com',
         shippingAddress: '123 Main St'
       });
       expect(orderModel.findById).toHaveBeenCalledWith('1');

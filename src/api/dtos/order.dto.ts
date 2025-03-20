@@ -31,7 +31,7 @@ export class CreateOrderDto {
   customerName: string;
 
   @ApiProperty({
-    example: 'john@example.com',
+    example: 'samru@gmail.com',
     description: 'Email address of the customer'
   })
   @IsString()
@@ -88,7 +88,7 @@ export class OrderResponseDto {
   customerName: string;
 
   @ApiProperty({
-    example: 'john@example.com',
+    example: 'samru@gmail.com',
     description: 'Email address of the customer'
   })
   customerEmail: string;

@@ -329,7 +329,7 @@ describe('AppController (e2e)', () => {
           recordId: nonExistentRecordId,
           quantity: 1,
           customerName: 'Sam Ru',
-          customerEmail: 'john@example.com',
+          customerEmail: 'samru@gmail.com',
           shippingAddress: '123 Main St'
         };
 
