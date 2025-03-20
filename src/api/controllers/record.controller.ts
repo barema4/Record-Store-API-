@@ -7,8 +7,6 @@ import {
   Query,
   Put,
   Delete,
-  HttpCode,
-  HttpStatus
 } from '@nestjs/common';
 import { RecordService } from '../services/record.service';
 import { CreateRecordDto, UpdateRecordDto } from '../dtos/record.dto';

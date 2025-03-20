@@ -1,4 +1,4 @@
-import { IsString, IsNumber, Min } from 'class-validator';
+import { IsString, IsNumber, Min, IsEmail, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateOrderDto {
@@ -7,6 +7,7 @@ export class CreateOrderDto {
     description: 'ID of the record being ordered'
   })
   @IsString()
+  @IsNotEmpty()
   recordId: string;
 
   @ApiProperty({
@@ -17,6 +18,31 @@ export class CreateOrderDto {
   @IsNumber()
   @Min(1)
   quantity: number;
+
+  @ApiProperty({
+    example: 'Sam Ru',
+    description: 'Name of the customer'
+  })
+  @IsString()
+  @IsNotEmpty()
+  customerName: string;
+
+  @ApiProperty({
+    example: 'sam.ru@gmail.com',
+    description: 'Email address of the customer'
+  })
+  @IsString()
+  @IsEmail()
+  @IsNotEmpty()
+  customerEmail: string;
+
+  @ApiProperty({
+    example: '123 Main St, City, Country',
+    description: 'Shipping address for the order'
+  })
+  @IsString()
+  @IsNotEmpty()
+  shippingAddress: string;
 }
 
 export class OrderResponseDto {
@@ -34,6 +60,15 @@ export class OrderResponseDto {
 
   @ApiProperty({ example: '2024-03-16T10:30:00.000Z' })
   orderDate: Date;
+
+  @ApiProperty({ example: 'Sam Ru' })
+  customerName: string;
+
+  @ApiProperty({ example: 'sam.ru@gmail.com' })
+  customerEmail: string;
+
+  @ApiProperty({ example: '123 Main St, City, Country' })
+  shippingAddress: string;
 }
 
 export class PaginatedOrderResponseDto {

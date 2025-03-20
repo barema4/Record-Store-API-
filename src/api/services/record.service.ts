@@ -305,11 +305,15 @@ export class RecordService {
       minPrice,
       maxPrice,
       inStock,
-      page = 1,
-      limit = 10,
+      page: rawPage = 1,
+      limit: rawLimit = 10,
       sortBy = 'lastModified',
       sortOrder = 'desc'
     } = query;
+
+    // Ensure valid pagination parameters
+    const page = Math.max(1, Number(rawPage));
+    const limit = Math.max(1, Math.min(100, Number(rawLimit))); // Cap at 100 items per page
 
     const filter: any = {};
     
@@ -339,8 +343,8 @@ export class RecordService {
 
     return {
       data: records.map(record => this.toResponseDto(record as Record)),
-      page: Number(page),
-      limit: Number(limit),
+      page,
+      limit,
       total,
       totalPages: Math.ceil(total / limit)
     };

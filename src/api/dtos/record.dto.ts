@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsEnum, IsOptional, Min } from 'class-validator';
+import { IsString, IsNumber, IsEnum, IsOptional, Min, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { RecordFormat, RecordCategory } from '../schemas/record.enum';
 
@@ -8,6 +8,7 @@ export class CreateRecordDto {
     description: 'Name of the artist/band'
   })
   @IsString()
+  @IsNotEmpty()
   artist: string;
 
   @ApiProperty({
@@ -15,6 +16,7 @@ export class CreateRecordDto {
     description: 'Name of the album'
   })
   @IsString()
+  @IsNotEmpty()
   album: string;
 
   @ApiProperty({
@@ -41,6 +43,7 @@ export class CreateRecordDto {
     description: 'Format of the record'
   })
   @IsEnum(RecordFormat)
+  @IsNotEmpty()
   format: RecordFormat;
 
   @ApiProperty({
@@ -49,6 +52,7 @@ export class CreateRecordDto {
     description: 'Genre/category of the record'
   })
   @IsEnum(RecordCategory)
+  @IsNotEmpty()
   category: RecordCategory;
 
   @ApiProperty({
@@ -68,6 +72,7 @@ export class UpdateRecordDto {
     required: false
   })
   @IsString()
+  @IsNotEmpty()
   @IsOptional()
   artist?: string;
 
@@ -77,6 +82,7 @@ export class UpdateRecordDto {
     required: false
   })
   @IsString()
+  @IsNotEmpty()
   @IsOptional()
   album?: string;
 
@@ -87,8 +93,8 @@ export class UpdateRecordDto {
     required: false
   })
   @IsNumber()
-  @IsOptional()
   @Min(0)
+  @IsOptional()
   price?: number;
 
   @ApiProperty({
@@ -98,8 +104,8 @@ export class UpdateRecordDto {
     required: false
   })
   @IsNumber()
-  @IsOptional()
   @Min(0)
+  @IsOptional()
   qty?: number;
 
   @ApiProperty({
@@ -109,6 +115,7 @@ export class UpdateRecordDto {
     required: false
   })
   @IsEnum(RecordFormat)
+  @IsNotEmpty()
   @IsOptional()
   format?: RecordFormat;
 
@@ -119,6 +126,7 @@ export class UpdateRecordDto {
     required: false
   })
   @IsEnum(RecordCategory)
+  @IsNotEmpty()
   @IsOptional()
   category?: RecordCategory;
 
