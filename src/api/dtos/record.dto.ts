@@ -1,6 +1,7 @@
 import { IsString, IsNumber, IsEnum, IsOptional, Min, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { RecordFormat, RecordCategory } from '../schemas/record.enum';
+import { NoWhitespace } from '../decorators/no-whitespace.decorator';
 
 export class CreateRecordDto {
   @ApiProperty({
@@ -9,6 +10,7 @@ export class CreateRecordDto {
   })
   @IsString()
   @IsNotEmpty()
+  @NoWhitespace()
   artist: string;
 
   @ApiProperty({
@@ -17,6 +19,7 @@ export class CreateRecordDto {
   })
   @IsString()
   @IsNotEmpty()
+  @NoWhitespace()
   album: string;
 
   @ApiProperty({
@@ -62,6 +65,7 @@ export class CreateRecordDto {
   })
   @IsString()
   @IsOptional()
+  @NoWhitespace()
   mbid?: string;
 }
 
@@ -74,6 +78,7 @@ export class UpdateRecordDto {
   @IsString()
   @IsNotEmpty()
   @IsOptional()
+  @NoWhitespace()
   artist?: string;
 
   @ApiProperty({
@@ -84,6 +89,7 @@ export class UpdateRecordDto {
   @IsString()
   @IsNotEmpty()
   @IsOptional()
+  @NoWhitespace()
   album?: string;
 
   @ApiProperty({
@@ -137,5 +143,6 @@ export class UpdateRecordDto {
   })
   @IsString()
   @IsOptional()
+  @NoWhitespace()
   mbid?: string;
 } 
