@@ -1,6 +1,6 @@
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger, HttpStatus } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, SortOrder } from 'mongoose';
+import { Model, SortOrder, FilterQuery } from 'mongoose';
 import { Record } from '../schemas/record.schema';
 import { CreateRecordDto, UpdateRecordDto } from '../dtos/record.dto';
 import { RecordResponseDto, PaginatedRecordResponseDto } from '../dtos/record.response.dto';
@@ -21,6 +21,32 @@ interface EnhancedCreateRecordDto extends CreateRecordDto {
 
 interface EnhancedUpdateRecordDto extends UpdateRecordDto {
   tracklist?: string[];
+}
+
+interface RecordQuery {
+  artist?: string;
+  album?: string;
+  format?: string;
+  category?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  inStock?: boolean;
+  page?: number | string;
+  limit?: number | string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+interface RecordFilter {
+  artist?: RegExp;
+  album?: RegExp;
+  format?: string;
+  category?: string;
+  qty?: { $gt: number };
+  price?: {
+    $gte?: number;
+    $lte?: number;
+  };
 }
 
 @Injectable()
@@ -102,15 +128,14 @@ export class RecordService {
         }
         
         // Extract artist name
-        if (release['artist-credit'] && release['artist-credit'][0] && 
-            release['artist-credit'][0].name && release['artist-credit'][0].name[0]) {
-          data.artist = release['artist-credit'][0].name[0];
-          this.logger.log(`Found artist: ${data.artist}`);
-        } else if (release['artist-credit'] && release['artist-credit'][0] && 
-                  release['artist-credit'][0].artist && release['artist-credit'][0].artist[0] &&
-                  release['artist-credit'][0].artist[0].name && release['artist-credit'][0].artist[0].name[0]) {
-          data.artist = release['artist-credit'][0].artist[0].name[0];
-          this.logger.log(`Found artist (alternative path): ${data.artist}`);
+        const artistCredit = release['artist-credit']?.[0];
+        if (artistCredit) {
+          const artistName = artistCredit.name?.[0] || 
+                           artistCredit.artist?.[0]?.name?.[0];
+          if (artistName) {
+            data.artist = artistName;
+            this.logger.log(`Found artist: ${data.artist}`);
+          }
         }
         
         // Extract release date
@@ -192,7 +217,10 @@ export class RecordService {
     });
 
     if (existingRecord) {
-      throw new BadRequestException('Record already exists');
+      throw new BadRequestException({
+        message: 'Record already exists',
+        error: 'Bad Request'
+      });
     }
 
     // If MBID is provided, fetch record data from MusicBrainz
@@ -234,7 +262,10 @@ export class RecordService {
   async update(id: string, updateRecordDto: UpdateRecordDto): Promise<RecordResponseDto> {
     const record = await this.recordModel.findById(id);
     if (!record) {
-      throw new NotFoundException('Record not found');
+      throw new NotFoundException({
+        message: 'Record not found',
+        error: 'Not Found'
+      });
     }
 
     // If artist, album, or format is being updated, check for duplicates
@@ -252,9 +283,10 @@ export class RecordService {
       });
 
       if (existingRecord) {
-        throw new BadRequestException(
-          `A record with artist ${artist}, album ${album}, and format ${format} already exists`
-        );
+        throw new BadRequestException({
+          message: `A record with artist ${artist}, album ${album}, and format ${format} already exists`,
+          error: 'Bad Request'
+        });
       }
     }
 
@@ -296,7 +328,7 @@ export class RecordService {
     return this.toResponseDto(updatedRecord);
   }
 
-  async findAll(query: any): Promise<PaginatedRecordResponseDto> {
+  async findAll(query: RecordQuery): Promise<PaginatedRecordResponseDto> {
     const {
       artist,
       album,
@@ -305,13 +337,17 @@ export class RecordService {
       minPrice,
       maxPrice,
       inStock,
-      page = 1,
-      limit = 10,
+      page: rawPage = 1,
+      limit: rawLimit = 10,
       sortBy = 'lastModified',
       sortOrder = 'desc'
     } = query;
 
-    const filter: any = {};
+    // Ensure valid pagination parameters
+    const page = Math.max(1, Number(rawPage));
+    const limit = Math.max(1, Math.min(100, Number(rawLimit))); // Cap at 100 items per page
+
+    const filter: RecordFilter = {};
     
     if (artist) filter.artist = new RegExp(artist, 'i');
     if (album) filter.album = new RegExp(album, 'i');
@@ -339,8 +375,8 @@ export class RecordService {
 
     return {
       data: records.map(record => this.toResponseDto(record as Record)),
-      page: Number(page),
-      limit: Number(limit),
+      page,
+      limit,
       total,
       totalPages: Math.ceil(total / limit)
     };
@@ -349,7 +385,10 @@ export class RecordService {
   async findById(id: string): Promise<RecordResponseDto> {
     const record = await this.recordModel.findById(id);
     if (!record) {
-      throw new NotFoundException('Record not found');
+      throw new NotFoundException({
+        message: 'Record not found',
+        error: 'Not Found'
+      });
     }
     return this.toResponseDto(record);
   }
@@ -357,7 +396,10 @@ export class RecordService {
   async delete(id: string): Promise<void> {
     const result = await this.recordModel.deleteOne({ _id: id });
     if (result.deletedCount === 0) {
-      throw new NotFoundException('Record not found');
+      throw new NotFoundException({
+        message: 'Record not found',
+        error: 'Not Found'
+      });
     }
   }
 

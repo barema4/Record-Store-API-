@@ -9,11 +9,14 @@ describe('OrderController', () => {
 
   // Mock order data
   const mockOrder: OrderResponseDto = {
-    id: '6502a59a5d6d1234567890ab',
-    recordId: '6502a59a5d6d1234567890aa',
-    quantity: 2,
-    totalPrice: 59.98,
-    orderDate: new Date('2023-09-14T10:00:00.000Z'),
+    id: '1',
+    recordId: '1',
+    quantity: 1,
+    totalPrice: 10,
+    orderDate: new Date(),
+    customerName: 'Sam Ru',
+    customerEmail: 'samru@gmail.com',
+    shippingAddress: '123 Main St'
   };
 
   const mockPaginatedResponse: PaginatedOrderResponseDto = {
@@ -25,8 +28,11 @@ describe('OrderController', () => {
   };
 
   const createOrderDto: CreateOrderDto = {
-    recordId: '6502a59a5d6d1234567890aa',
-    quantity: 2,
+    recordId: '1',
+    quantity: 1,
+    customerName: 'Sam Ru',
+    customerEmail: 'samru@gmail.com',
+    shippingAddress: '123 Main St'
   };
 
   // Mock service
@@ -61,12 +67,9 @@ describe('OrderController', () => {
 
   describe('create', () => {
     it('should create an order', async () => {
-   
       mockOrderService.create.mockResolvedValue(mockOrder);
 
-
       const result = await controller.create(createOrderDto);
-
 
       expect(service.create).toHaveBeenCalledWith(createOrderDto);
       expect(result).toEqual(mockOrder);
@@ -75,10 +78,8 @@ describe('OrderController', () => {
 
   describe('findAll', () => {
     it('should return paginated orders', async () => {
- 
       mockOrderService.findAll.mockResolvedValue(mockPaginatedResponse);
       const queryParams = { page: '1', limit: '10' };
-
 
       const result = await controller.findAll(queryParams);
 

@@ -1,6 +1,7 @@
-import { IsString, IsNumber, IsEnum, IsOptional, Min } from 'class-validator';
+import { IsString, IsNumber, IsEnum, IsOptional, Min, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { RecordFormat, RecordCategory } from '../schemas/record.enum';
+import { NoWhitespace } from '../decorators/no-whitespace.decorator';
 
 export class CreateRecordDto {
   @ApiProperty({
@@ -8,6 +9,8 @@ export class CreateRecordDto {
     description: 'Name of the artist/band'
   })
   @IsString()
+  @IsNotEmpty()
+  @NoWhitespace()
   artist: string;
 
   @ApiProperty({
@@ -15,6 +18,8 @@ export class CreateRecordDto {
     description: 'Name of the album'
   })
   @IsString()
+  @IsNotEmpty()
+  @NoWhitespace()
   album: string;
 
   @ApiProperty({
@@ -41,6 +46,7 @@ export class CreateRecordDto {
     description: 'Format of the record'
   })
   @IsEnum(RecordFormat)
+  @IsNotEmpty()
   format: RecordFormat;
 
   @ApiProperty({
@@ -49,6 +55,7 @@ export class CreateRecordDto {
     description: 'Genre/category of the record'
   })
   @IsEnum(RecordCategory)
+  @IsNotEmpty()
   category: RecordCategory;
 
   @ApiProperty({
@@ -58,6 +65,7 @@ export class CreateRecordDto {
   })
   @IsString()
   @IsOptional()
+  @NoWhitespace()
   mbid?: string;
 }
 
@@ -68,7 +76,9 @@ export class UpdateRecordDto {
     required: false
   })
   @IsString()
+  @IsNotEmpty()
   @IsOptional()
+  @NoWhitespace()
   artist?: string;
 
   @ApiProperty({
@@ -77,7 +87,9 @@ export class UpdateRecordDto {
     required: false
   })
   @IsString()
+  @IsNotEmpty()
   @IsOptional()
+  @NoWhitespace()
   album?: string;
 
   @ApiProperty({
@@ -87,8 +99,8 @@ export class UpdateRecordDto {
     required: false
   })
   @IsNumber()
-  @IsOptional()
   @Min(0)
+  @IsOptional()
   price?: number;
 
   @ApiProperty({
@@ -98,8 +110,8 @@ export class UpdateRecordDto {
     required: false
   })
   @IsNumber()
-  @IsOptional()
   @Min(0)
+  @IsOptional()
   qty?: number;
 
   @ApiProperty({
@@ -109,6 +121,7 @@ export class UpdateRecordDto {
     required: false
   })
   @IsEnum(RecordFormat)
+  @IsNotEmpty()
   @IsOptional()
   format?: RecordFormat;
 
@@ -119,6 +132,7 @@ export class UpdateRecordDto {
     required: false
   })
   @IsEnum(RecordCategory)
+  @IsNotEmpty()
   @IsOptional()
   category?: RecordCategory;
 
@@ -129,5 +143,6 @@ export class UpdateRecordDto {
   })
   @IsString()
   @IsOptional()
+  @NoWhitespace()
   mbid?: string;
 } 

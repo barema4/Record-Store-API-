@@ -15,10 +15,20 @@ export class Order extends Document {
 
   @Prop({ required: true })
   totalPrice: number;
+
+  @Prop({ required: true })
+  customerName: string;
+
+  @Prop({ required: true })
+  customerEmail: string;
+
+  @Prop({ required: true })
+  shippingAddress: string;
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);
 
 // Create indexes for commonly queried fields
 OrderSchema.index({ orderDate: -1 });
-OrderSchema.index({ recordId: 1 }); 
+OrderSchema.index({ recordId: 1 });
+OrderSchema.index({ customerEmail: 1 }); 

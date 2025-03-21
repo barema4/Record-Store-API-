@@ -19,13 +19,16 @@ export class OrderService {
       quantity: order.quantity,
       totalPrice: order.totalPrice,
       orderDate: order.orderDate,
+      customerName: order.customerName,
+      customerEmail: order.customerEmail,
+      shippingAddress: order.shippingAddress
     };
   }
 
   async create(createOrderDto: CreateOrderDto): Promise<OrderResponseDto> {
     const record = await this.recordModel.findById(createOrderDto.recordId);
     if (!record) {
-      throw new NotFoundException('Record not found');
+      throw new NotFoundException(`Record with ID ${createOrderDto.recordId} not found`);
     }
 
     if (record.qty < createOrderDto.quantity) {
@@ -34,29 +37,30 @@ export class OrderService {
 
     const totalPrice = record.price * createOrderDto.quantity;
 
-    const order = new this.orderModel({
+    const order = await this.orderModel.create({
       ...createOrderDto,
       totalPrice,
       orderDate: new Date(),
     });
 
-    // Update record quantity
-    await this.recordModel.findByIdAndUpdate(
-      createOrderDto.recordId,
-      { $inc: { qty: -createOrderDto.quantity } }
-    );
+    await this.recordModel.findByIdAndUpdate(createOrderDto.recordId, {
+      $inc: { qty: -createOrderDto.quantity },
+    });
 
-    const savedOrder = await order.save();
-    return this.toResponseDto(savedOrder);
+    return this.toResponseDto(order);
   }
 
   async findAll(query: any): Promise<PaginatedOrderResponseDto> {
     const {
-      page = 1,
-      limit = 10,
+      page: rawPage = 1,
+      limit: rawLimit = 10,
       sortBy = 'orderDate',
       sortOrder = 'desc'
     } = query;
+
+    // Ensure valid pagination parameters
+    const page = Math.max(1, Number(rawPage));
+    const limit = Math.max(1, Math.min(100, Number(rawLimit))); // Cap at 100 items per page
 
     const skip = (page - 1) * limit;
     const sortOptions: { [key: string]: SortOrder } = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
@@ -73,8 +77,8 @@ export class OrderService {
 
     return {
       data: orders.map(order => this.toResponseDto(order as Order)),
-      page: Number(page),
-      limit: Number(limit),
+      page,
+      limit,
       total,
       totalPages: Math.ceil(total / limit)
     };
